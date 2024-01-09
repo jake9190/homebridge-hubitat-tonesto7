@@ -1594,6 +1594,11 @@ Map<String,Integer> deviceCapabilityList(device) {
             if (sdl) { logDebug("Filtering ${capName}") }
         }
     }
+    
+    // Remove filtered capabilities
+    List<String> filteredCaps = filteredOutCaps(device)
+    filteredCaps.each { String cap -> capItems.remove(cap) }
+    
     return capItems?.sort { (String)it.key }
 }
 
@@ -1607,7 +1612,9 @@ private List<String> filteredOutCaps(device) {
         String theCap = capFilterFLD[capName]
         if (theCap && isDeviceInInput(k, gtDevId(device))) { capsFiltered.push(theCap) }
     }
-    // List custCaps = getCustCapFilters()
+    
+    List custCaps = getCustCapFilters()
+    capsFiltered = capsFiltered + custCaps
     capsFiltered = capsFiltered + device.capabilities?.findAll { ignoreCapability(device, (String)it.name, true) }?.collect { (String)it.name }
     return capsFiltered
 }
@@ -1620,7 +1627,7 @@ private Boolean ignoreCapability(device, String icap, Boolean inclIgnoreFld=fals
     Map<String, List<String>> perDeviceFilters = customFilters.perDevice ?: [:]
     if (globalFilters.contains(cap)) { return true }
     String devid = gtDevId(device)
-    if (perDeviceFilters[devid] && (((List<String>)perDeviceFilters[devid]).collect { it.toLowerCase() }?.contains(cap)) ) { return true }
+    if (perDeviceFilters[devid] && (((List<String>)perDeviceFilters[devid]).collect { it.toLowerCase() }?.contains(cap)) ) { return true }    
     return false
 }
 
@@ -1710,6 +1717,11 @@ Map<String,Object> deviceAttributeList(device) {
             [(attr): null]
         }
     }
+    
+    // Remove any filtered out attributes
+    List<String> filteredAttr = filteredOutAttrs(device)
+    filteredAttr.each { String attribute -> atts.remove(attribute) }
+    
     if (isDeviceInInput('tstatCoolList', devid)) { atts.remove('heatingSetpoint'); atts.remove('heatingSetpointRange') }
     if (isDeviceInInput('tstatHeatList', devid)) { atts.remove('coolingSetpoint'); atts.remove('coolingSetpointRange') }
     if (isDeviceInInput('removeColorControl', devid)) { atts.remove('RGB'); atts.remove('color'); atts.remove('colorName'); atts.remove('hue'); atts.remove('saturation') }
@@ -1799,6 +1811,7 @@ void registerChangeHandler(List devices, Boolean showlog=false) {
                     }
                     if (skipAtt) { return }
                 }
+                if (ignoreAttribute(device, att)) { return }
                 attMapFLD.each { String k, String v -> if (att == k && isDeviceInInput("remove${v}".toString(), devid)) { return } }
                 if (
                     (att == 'pushed' && !isDeviceInInput('pushableButtonList', devid)) ||
